@@ -2,19 +2,10 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
+from retrain_prophet import retrain_if_needed
 import pandas as pd
 
-# -----------------------------
-# SAFE IMPORT (LOCAL + RENDER)
-# -----------------------------
-try:
-    # Render / production
-    from backend.scheduler import scheduler
-except ImportError:
-    # Local development
-    from scheduler import scheduler
 
-# -----------------------------
 # PATH FIX
 # -----------------------------
 BASE_DIR = Path(__file__).resolve().parent
@@ -51,13 +42,24 @@ def root():
 @app.get("/forecast")
 def forecast():
     try:
+        # 🔄 Free annual auto-retrain (year-check logic)
+        retrain_if_needed()
+
+        # 🔒 Locked forecast must exist
         if not LOCKED_FORECAST_PATH.exists():
-            raise FileNotFoundError(
-                f"Forecast file not found at {LOCKED_FORECAST_PATH}"
+            raise HTTPException(
+                status_code=500,
+                detail="Locked forecast file not found. Model may not be trained yet."
             )
 
         df = pd.read_csv(LOCKED_FORECAST_PATH)
         return df.to_dict(orient="records")
 
+    except HTTPException:
+        raise  # rethrow intended API errors
+
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(
+            status_code=500,
+            detail=f"Forecast generation failed: {str(e)}"
+        )
