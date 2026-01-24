@@ -4,8 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import pandas as pd
 
-from backend.scheduler import scheduler  # ✅ FIXED IMPORT
-
+from scheduler import scheduler
 # -----------------------------
 # PATH FIX
 # -----------------------------

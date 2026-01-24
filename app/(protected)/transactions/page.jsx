@@ -399,7 +399,7 @@ return (
                               ))}
                             </Pie>
                             <Tooltip
-                              formatter={(value) => [`₱${Number(value).toLocaleString()}`, 'Allocation']}
+                              formatter={(value) => [`₱${Number(value).toLocaleString()}`]}
                               contentStyle={{
                                 backgroundColor: 'white',
                                 border: '1px solid #e2e8f0',

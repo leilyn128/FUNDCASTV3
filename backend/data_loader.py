@@ -1,4 +1,4 @@
-from database import get_db_connection
+from database import get_budget_data
 import pandas as pd
 
 def load_yearly_income():
@@ -12,8 +12,6 @@ def load_yearly_income():
         ORDER BY year
     """
 
-    conn = get_db_connection()
-    df = pd.read_sql(query, conn)
-    conn.close()
-
+    df = get_budget_data()
+    
     return df
