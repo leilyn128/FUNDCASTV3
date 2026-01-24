@@ -4,6 +4,7 @@
   "/(protected)/reports/page": "app/(protected)/reports/page.js",
   "/(protected)/transaction/page": "app/(protected)/transaction/page.js",
   "/(protected)/transactions/page": "app/(protected)/transactions/page.js",
+  "/_not-found/page": "app/_not-found/page.js",
   "/api/forecast/route": "app/api/forecast/route.js",
   "/auth/page": "app/auth/page.js",
   "/favicon.ico/route": "app/favicon.ico/route.js",

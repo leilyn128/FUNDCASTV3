@@ -46,7 +46,7 @@ __turbopack_context__.s([
     ()=>GET
 ]);
 async function GET() {
-    const res = await fetch("http://192.168.100.180:8000/forecast", {
+    const res = await fetch(`${("TURBOPACK compile-time value", "https://fundcast-api.onrender.com")}/forecast`, {
         cache: "no-store"
     });
     if (!res.ok) {

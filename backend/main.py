@@ -27,6 +27,7 @@ app.add_middleware(
         "http://127.0.0.1:3000",
         "http://192.168.100.180:3000",   # local network
         "https://fundcast-api.onrender.com",
+        "https://fundcast-ui.vercel.app"
     ],
     allow_credentials=True,
     allow_methods=["*"],
