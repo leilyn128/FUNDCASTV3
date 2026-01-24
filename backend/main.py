@@ -2,10 +2,14 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
-from retrain_prophet import retrain_if_needed
 import pandas as pd
 
-
+try:
+    # Render / production
+    from backend.retrain_prophet import retrain_if_needed
+except ImportError:
+    # Local development (cd backend && uvicorn main:app)
+    from retrain_prophet import retrain_if_needed
 # PATH FIX
 # -----------------------------
 BASE_DIR = Path(__file__).resolve().parent
