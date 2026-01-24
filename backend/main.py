@@ -4,7 +4,16 @@ from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 import pandas as pd
 
-from scheduler import scheduler
+# -----------------------------
+# SAFE IMPORT (LOCAL + RENDER)
+# -----------------------------
+try:
+    # Render / production
+    from backend.scheduler import scheduler
+except ImportError:
+    # Local development
+    from scheduler import scheduler
+
 # -----------------------------
 # PATH FIX
 # -----------------------------
@@ -21,6 +30,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
+        "http://192.168.100.180:3000",   # local network
         "https://fundcast-api.onrender.com",
     ],
     allow_credentials=True,
