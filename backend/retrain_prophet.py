@@ -14,11 +14,7 @@ from supabase import create_client
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
 
-if not SUPABASE_URL or not SUPABASE_KEY:
-    raise RuntimeError("Supabase credentials not set")
-
-supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
+supabase = None
 # -----------------------------
 # PATHS
 # -----------------------------
@@ -33,6 +29,13 @@ MODELS_DIR.mkdir(exist_ok=True)
 # LOAD DATA FROM SUPABASE
 # -----------------------------
 def load_yearly_data():
+    global supabase
+
+    if supabase is None:
+        if not SUPABASE_URL or not SUPABASE_KEY:
+            raise RuntimeError("Supabase credentials not set")
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+
     response = (
         supabase
         .from_("yearly_budget")
