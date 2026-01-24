@@ -1,13 +1,13 @@
 # backend/main.py
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import HTTPException
 from pathlib import Path
 import pandas as pd
-from scheduler import scheduler
+
+from backend.scheduler import scheduler  # ✅ FIXED IMPORT
 
 # -----------------------------
-# PATH FIX (THIS IS THE KEY)
+# PATH FIX
 # -----------------------------
 BASE_DIR = Path(__file__).resolve().parent
 LOCKED_FORECAST_PATH = BASE_DIR / "models" / "locked_forecast.csv"
@@ -22,7 +22,7 @@ app.add_middleware(
     allow_origins=[
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "https://fundcast-api.onrender.com",  # optional
+        "https://fundcast-api.onrender.com",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -37,7 +37,7 @@ def root():
     return {"message": "Prophet API (LOCKED forecast, read-only)"}
 
 # -----------------------------
-# FORECAST ENDPOINT (LOCKED)
+# FORECAST ENDPOINT
 # -----------------------------
 @app.get("/forecast")
 def forecast():
