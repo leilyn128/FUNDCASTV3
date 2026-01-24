@@ -1,9 +1,16 @@
-# main.py
+# backend/main.py
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi import HTTPException
+from pathlib import Path
 import pandas as pd
+from scheduler import scheduler
 
-LOCKED_FORECAST_PATH = "models/locked_forecast.csv"
+# -----------------------------
+# PATH FIX (THIS IS THE KEY)
+# -----------------------------
+BASE_DIR = Path(__file__).resolve().parent
+LOCKED_FORECAST_PATH = BASE_DIR / "models" / "locked_forecast.csv"
 
 app = FastAPI()
 
@@ -12,18 +19,15 @@ app = FastAPI()
 # -----------------------------
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "https://fundcast-api.onrender.com",  # optional
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# -----------------------------
-# LOAD LOCKED FORECAST
-# -----------------------------
-def load_locked_forecast():
-    df = pd.read_csv(LOCKED_FORECAST_PATH)
-    return df.to_dict(orient="records")
 
 # -----------------------------
 # ROOT
@@ -37,4 +41,14 @@ def root():
 # -----------------------------
 @app.get("/forecast")
 def forecast():
-    return pd.read_csv("models/locked_forecast.csv").to_dict(orient="records")
+    try:
+        if not LOCKED_FORECAST_PATH.exists():
+            raise FileNotFoundError(
+                f"Forecast file not found at {LOCKED_FORECAST_PATH}"
+            )
+
+        df = pd.read_csv(LOCKED_FORECAST_PATH)
+        return df.to_dict(orient="records")
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
