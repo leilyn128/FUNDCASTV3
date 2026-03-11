@@ -34,12 +34,12 @@ const [forecastYearsToShow, setForecastYearsToShow] = useState(1);
 const forecastMapped = Array.isArray(forecastData)
   ? forecastData
       .filter(f => f.year > lastActualYear)
-      .slice(0, forecastYearsToShow) // 🔥 LIMIT YEARS HERE
+      .slice(0, forecastYearsToShow)
       .map(f => ({
         fiscalYear: Number(f.year),
         actualBudget: null,
-        forecastBudget: f.value ?? 0,
-        projectedGrowth: f.growthRate || null,
+        forecastBudget: Number(f.upper) ?? 0, // ✅ PROPHET UPPER
+        projectedGrowth: null,
       }))
   : [];
 

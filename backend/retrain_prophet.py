@@ -1,108 +1,78 @@
-# backend/retrain_prophet.py
+from prophet import Prophet
+import pandas as pd
+import joblib
 import os
 import json
 from datetime import datetime
-from pathlib import Path
+from data_loader import load_all_yearly_income
 
-import pandas as pd
-from prophet import Prophet
-from supabase import create_client
+MODEL_PATH = "models/prophet2.pkl"
+META_PATH = "models/meta.json"
 
-# -----------------------------
-# SUPABASE CONFIG
-# -----------------------------
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+def retrain_if_needed(force=False):
+    print("🚀 retrain_if_needed called | force =", force)
 
-supabase = None
-# -----------------------------
-# PATHS
-# -----------------------------
-BASE_DIR = Path(__file__).resolve().parent
-MODELS_DIR = BASE_DIR / "models"
-FORECAST_PATH = MODELS_DIR / "locked_forecast.csv"
-META_PATH = MODELS_DIR / "meta.json"
+    df = load_all_yearly_income()
+    print("📊 Loaded data shape:", df.shape)
 
-MODELS_DIR.mkdir(exist_ok=True)
-
-# -----------------------------
-# LOAD DATA FROM SUPABASE
-# -----------------------------
-def load_yearly_data():
-    global supabase
-
-    if supabase is None:
-        if not SUPABASE_URL or not SUPABASE_KEY:
-            raise RuntimeError("Supabase credentials not set")
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-    response = (
-        supabase
-        .from_("yearly_budget")
-        .select("year,total_income")
-        .order("year")
-        .execute()
-    )
-
-    if not response.data:
-        raise ValueError("No data found in Supabase")
-
-    df = pd.DataFrame(response.data)
-    df["year"] = df["year"].astype(int)
-    df["total_income"] = df["total_income"].astype(float)
-
-    return df
-
-# -----------------------------
-# YEAR-CHECK RETRAIN LOGIC
-# -----------------------------
-def retrain_if_needed():
     current_year = datetime.now().year
+    last_retrain_year = None
 
-    # Load metadata
-    if META_PATH.exists():
-        meta = json.loads(META_PATH.read_text())
-        last_trained_year = meta.get("last_trained_year", 0)
-    else:
-        last_trained_year = 0
+    if os.path.exists(META_PATH):
+        with open(META_PATH, "r") as f:
+            last_retrain_year = json.load(f).get("last_retrain_year")
 
-    # Already trained this year → exit
-    if current_year <= last_trained_year:
-        print("ℹ️ Model already trained for year", last_trained_year)
+    print("📅 Last retrain year:", last_retrain_year)
+
+    if not force and last_retrain_year == current_year and os.path.exists(MODEL_PATH):
+        print("✅ Model already trained for this year")
         return
 
-    print("🔄 New year detected — retraining Prophet model")
+    print("🔥 Training Prophet model now...")
 
-    # Load and prepare data
-    df = load_yearly_data()
-    df = df.rename(columns={"year": "ds", "total_income": "y"})
-    df["ds"] = pd.to_datetime(df["ds"], format="%Y")
-
-    # Train model
-    model = Prophet()
-    model.fit(df)
-
-    # Forecast next 5 years
-    future = model.make_future_dataframe(periods=3, freq="Y")
-    forecast = model.predict(future)
-
-    result = forecast[["ds", "yhat"]].tail(5)
-    result["year"] = result["ds"].dt.year
-    result.rename(columns={"yhat": "prediction"}, inplace=True)
-    result = result[["year", "prediction"]]
-
-    # Save locked forecast
-    result.to_csv(FORECAST_PATH, index=False)
-
-    # Update metadata
-    META_PATH.write_text(
-        json.dumps({"last_trained_year": current_year}, indent=2)
+    model = Prophet(
+        yearly_seasonality=False,
+        weekly_seasonality=False,
+        daily_seasonality=False,
+        changepoint_prior_scale=0.5,
+        seasonality_prior_scale=10.0
     )
 
-    print("✅ Retraining completed for year", current_year)
+    model.fit(df)
+    print("✅ Model fit complete")
 
-# -----------------------------
-# MANUAL RUN (OPTIONAL)
-# -----------------------------
-if __name__ == "__main__":
-    retrain_if_needed()
+    joblib.dump(model, MODEL_PATH)
+    print("💾 Model saved to", MODEL_PATH)
+
+    with open(META_PATH, "w") as f:
+        json.dump({"last_retrain_year": current_year}, f)
+
+def get_forecast(years_ahead=3):
+    print("📡 get_forecast called | years_ahead =", years_ahead)
+
+    try:
+        model = joblib.load(MODEL_PATH)
+        print("📦 Model loaded successfully")
+    except Exception as e:
+        print("❌ Model load failed:", e)
+        print("🔁 Forcing retrain...")
+        retrain_if_needed(force=True)
+        model = joblib.load(MODEL_PATH)
+
+    last_date = model.history["ds"].max()
+
+    future = pd.DataFrame({
+        "ds": pd.date_range(
+            start=last_date + pd.DateOffset(years=1),
+            periods=years_ahead,
+            freq="YS"
+        )
+    })
+    forecast = model.predict(future)
+
+    last_train_date = model.history["ds"].max()
+    future_only = forecast[forecast["ds"] > last_train_date]
+
+    print("📈 Forecast rows:", len(future_only))
+
+    return future_only[["ds", "yhat"]]

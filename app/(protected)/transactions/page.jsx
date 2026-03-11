@@ -47,7 +47,7 @@ export default function TransactionPage() {
   ========================= */
   const nextYearForecast = useMemo(() => {
     if (!forecastData || forecastData.length === 0) return 0;
-    return forecastData[0].value;
+return forecastData[0].mean;
   }, [forecastData]);
 
   /* =========================
@@ -61,24 +61,28 @@ export default function TransactionPage() {
     try {
       setError(null);
 
-      const res = await fetch("/api/forecast", { cache: "no-store" });
+const res = await fetch("http://127.0.0.1:8000/forecast?years_ahead=3");
       if (!res.ok) throw new Error("Forecast failed");
 
       const data = await res.json();
       const lastYear = Math.max(...budgetData.map(d => d.year));
 
       setForecastData(
-        data
-          .filter(d => d.year > lastYear)
-          .map(d => ({
-            year: d.year,
-            value: Number(d.prediction),
-          }))
-      );
+  data
+    .map(d => ({
+      year: new Date(d.ds).getFullYear(),
+      mean: Number(d.yhat),
+      upper: Number(d.yhat_upper),
+      lower: Number(d.yhat_lower),
+    }))
+    .filter(d => d.year > lastYear)
+);
+
     } catch {
       setError("Failed to load forecast data.");
     }
   }
+console.log("Mapped forecast:", forecastData);
 
   /* =========================
      FETCH HISTORICAL EXPENSES
@@ -176,7 +180,7 @@ export default function TransactionPage() {
 
     return forecastData
       .map(forecast => {
-        const total = Number(forecast.value);
+const total = Number(forecast.mean);
         if (!Number.isFinite(total) || total <= 0) return null;
 
         return {
